@@ -1,0 +1,123 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+// Looking for ways to speed up your queries, or scale easily with your serverless or edge functions?
+// Try Prisma Accelerate: https://pris.ly/cli/accelerate-init
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id                  String         @id @default(uuid())
+  email               String         @unique
+  phone               String?        @unique
+  password            String
+  fullName            String
+  type                UserType       @default(MEMBER)
+  data                Json?
+  gender              Gender?
+  appointedAdmin      Boolean        @default(false)
+  isChildrenLeader    Boolean        @default(false)
+  isChildrenChurch    Boolean        @default(false)
+  churchId            String?
+  leaderId            String?
+  leader              User?          @relation(fields: [leaderId], references: [id], name: "Disciples")
+  disciples           User[]         @relation("Disciples")
+  isAvailable         Boolean        @default(true)
+  createdAt           DateTime       @default(now())
+  updatedAt           DateTime       @updatedAt
+  churches            Church[]
+  church              Church?        @relation(fields: [churchId], references: [id], name: "ChurchMembers")
+  attendances         Attendance[]
+  recordedAttendances Attendance[]   @relation("AttendanceRecorder")
+  notifications       Notification[]
+
+  @@map(name: "users")
+}
+
+model Church {
+  id             String       @id @default(uuid())
+  name           String
+  type           ChurchType   @default(LOCAL)
+  address        String?
+  data           Json?
+  location       String       @default("lagos")
+  pastorId       String
+  pastor         User         @relation(fields: [pastorId], references: [id])
+  members        User[]       @relation("ChurchMembers")
+  parentChurchId String?
+  parentChurch   Church?      @relation(fields: [parentChurchId], references: [id], name: "SubChurches")
+  subChurches    Church[]     @relation("SubChurches")
+  createdAt      DateTime     @default(now())
+  updatedAt      DateTime     @updatedAt
+  attendances    Attendance[]
+
+  @@map(name: "churches")
+}
+
+model Attendance {
+  id         String           @id @default(uuid())
+  date       DateTime
+  isPresent  Boolean          @default(false)
+  status     AttendanceStatus
+  userId     String
+  user       User             @relation(fields: [userId], references: [id])
+  churchId   String
+  church     Church           @relation(fields: [churchId], references: [id])
+  recorderId String
+  recorder   User             @relation(fields: [recorderId], references: [id], name: "AttendanceRecorder")
+  note       String?
+  createdAt  DateTime         @default(now())
+  updatedAt  DateTime         @updatedAt
+
+  @@map(name: "attendances")
+}
+
+model Notification {
+  id        String   @id @default(uuid())
+  title     String
+  message   String
+  isRead    Boolean  @default(false)
+  userId    String
+  user      User     @relation(fields: [userId], references: [id])
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@map(name: "notifications")
+}
+
+// Enums
+enum UserType {
+  MEMBER
+  WORKER
+  LEADER
+  PASTOR
+}
+
+enum Gender {
+  MALE
+  FEMALE
+}
+
+enum ChurchType {
+  LOCAL
+  AREA
+  ZONE
+  REGION
+  NATIONAL
+  INTERNATIONAL
+}
+
+enum AttendanceStatus {
+  PRESENT
+  ABSENT
+  LATE
+  EXPLAINED_ABSENCE
+  UNEXPLAINED_ABSENCE
+}
